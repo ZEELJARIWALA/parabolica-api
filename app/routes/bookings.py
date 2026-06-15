@@ -36,38 +36,7 @@ def create_booking(
             detail="FPV DRONE PILOTING is currently offline at MUMBAI terminal."
         )
 
-    # ✅ Step 1: Check Slot Availability for EACH game in sequence
-    # We check against game-specific tables to prevent double-booking
-    for mc in payload.mission_configs:
-        table_name = mc.game_type.lower() + "_bookings"
-        # Extract date and time from the config
-        # (Assuming frontend sends date/time in the config object as per user request)
-        g_date = mc.config.get("date")
-        g_time = mc.config.get("time")
-        
-        if not g_date or not g_time:
-            raise HTTPException(status_code=400, detail=f"Mission {mc.game_type} is missing date or time calibration.")
-
-        # Check if slot is taken (Ignore cancelled bookings)
-        try:
-            collision = supabase.table(table_name) \
-                .select("id, bookings!inner(status)") \
-                .eq("branch", payload.branch) \
-                .eq("slot_date", g_date) \
-                .eq("slot_time", g_time) \
-                .neq("bookings.status", "CANCELLED") \
-                .execute()
-
-            if collision and collision.data:
-                raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
-                    detail=f"CRITICAL: {mc.game_type} slot at {g_time} on {g_date} is already occupied. Please select an alternative window."
-                )
-        except Exception as e:
-            if "relation" in str(e).lower():
-                raise HTTPException(status_code=500, detail=f"Database Table '{table_name}' is missing. Go to Supabase SQL and create it.")
-            # If it's just a 404/Empty from maybe_single or a simple error, we continue
-            pass
+    # (Slots will be validated by unique constraints during insertion)
 
     # ✅ Step 2: Insert parent 'bookings' record
     booking_insert = {
@@ -88,13 +57,7 @@ def create_booking(
         for mc in payload.mission_configs:
             table_name = mc.game_type.lower() + "_bookings"
             
-            # ✅ FIX: Explicitly clear any existing slot records (Cancelled ones) to satisfy Unique Constraints
-            supabase.table(table_name) \
-                .delete() \
-                .eq("branch", payload.branch) \
-                .eq("slot_date", mc.config.get("date")) \
-                .eq("slot_time", mc.config.get("time")) \
-                .execute()
+            # (Optimistic insertion)
 
             game_insert = {
                 "booking_id": booking_id,
@@ -133,7 +96,6 @@ def create_booking(
     return {
         "success": True,
         "booking_id": booking_id,
-        "sequence": game_types,
         "message": "MISSION DATA TRANSMITTED. ALL SLOTS SECURED."
     }
 
