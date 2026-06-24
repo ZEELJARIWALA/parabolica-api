@@ -38,47 +38,55 @@ Book your slot here: {booking_link}
 
 @router.post("/webhook")
 async def webhook(request: Request, background_tasks: BackgroundTasks):
-    data = await request.json()
-    logging.info(f"Incoming Webhook Data: {data}")
-    
     try:
+        data = await request.json()
+        print(f"DEBUG: Received Webhook - {data}") # Render will always show 'print'
+        
         type_webhook = data.get("typeWebhook")
         
         if type_webhook == "incomingMessageReceived":
-            body = data.get("messageData", {}).get("textMessageData", {}).get("textMessage")
             sender_data = data.get("senderData", {})
-            phone = sender_data.get("sender") 
-            chat_id = sender_data.get("chatId") # Format: 91XXXXXXXXXX@c.us
+            chat_id = sender_data.get("chatId")
             name = sender_data.get("senderName", "Pilot")
             
-            logging.info(f"Message from {name} ({phone}): {body}")
+            # Extract text carefully
+            message_data = data.get("messageData", {})
+            body = ""
+            if "textMessageData" in message_data:
+                body = message_data["textMessageData"].get("textMessage", "")
+            
+            print(f"DEBUG: Msg from {name} ({chat_id}): {body}")
             
             if body and chat_id:
                 # Process in background
                 background_tasks.add_task(process_green_api_interaction, chat_id, name, body)
+            else:
+                print("DEBUG: Ignored - Missing body or chat_id")
                 
     except Exception as e:
-        logging.error(f"Green-API Webhook Processing Error: {e}")
+        print(f"DEBUG ERROR in webhook: {e}")
         
     return {"status": "success"}
 
 async def process_green_api_interaction(chat_id: str, name: str, text: str):
-    logging.info(f"Processing interaction for {chat_id}")
+    print(f"DEBUG: Processing for {chat_id}...")
     try:
         # 1. Update/Create user in database
         clean_phone = chat_id.split("@")[0]
         
+        print(f"DEBUG: Checking database for {clean_phone}...")
         user_query = supabase.table("whatsapp_contacts").select("*").eq("phone", clean_phone).execute()
         is_new_user = len(user_query.data) == 0
         
         if is_new_user:
-            logging.info(f"Registering new pilot: {clean_phone}")
+            print(f"DEBUG: Inserting NEW pilot {clean_phone}")
             supabase.table("whatsapp_contacts").insert({
                 "phone": clean_phone,
                 "name": name,
                 "last_message": text
             }).execute()
         else:
+            print(f"DEBUG: Updating existing pilot {clean_phone}")
             supabase.table("whatsapp_contacts").update({
                 "last_message": text,
                 "name": name 
@@ -90,9 +98,13 @@ async def process_green_api_interaction(chat_id: str, name: str, text: str):
         contact_phone = "+91 63542 28913"
         text_lower = text.lower().strip()
         
+        # Exact trigger for the button
         trigger_msg = "hello parabolica! i'm interested in booking a session."
         
+        print(f"DEBUG: Checking trigger for text: '{text_lower}'")
+
         if trigger_msg in text_lower or any(k in text_lower for k in ["price", "pricing", "rate", "cost"]):
+            print(f"DEBUG: Trigger MATCHED. Preparing pricing catalog.")
             response_text = (
                 f"Hello {name}! 🛰️ We're thrilled to have you at Parabolica.\n\n"
                 f"Here is our current mission catalog and exclusive offers:\n"
@@ -101,30 +113,31 @@ async def process_green_api_interaction(chat_id: str, name: str, text: str):
                 f"See you in the Arena! 🏎️💨"
             )
         elif is_new_user or any(k in text_lower for k in ["hello", "hi", "hey"]):
+            print(f"DEBUG: Trigger: Greeting. Sending menu.")
             response_text = f"Welcome to Parabolica, {name}! 🛰️\n\nAre you looking for *PRICING* or do you want to *BOOK* a session?\n\nType 'Pricing' for our latest packages!"
 
         # 3. Send via Green-API
         if response_text:
-            logging.info(f"Sending auto-reply to {chat_id}")
+            print(f"DEBUG: Sending message to Green-API for {chat_id}")
             await send_green_api_message(chat_id, response_text)
+        else:
+            print(f"DEBUG: No auto-reply response generated.")
             
     except Exception as e:
-        logging.error(f"Database/Logic Error: {e}")
+        print(f"DEBUG DATABASE ERROR: {e}")
 
 async def send_green_api_message(chat_id: str, message: str):
     url = f"{BASE_URL}/sendMessage/{API_TOKEN}"
-    payload = {
-        "chatId": chat_id,
-        "message": message
-    }
+    payload = {"chatId": chat_id, "message": message}
     
+    print(f"DEBUG: Requesting Green-API: {url}")
     async with httpx.AsyncClient() as client:
         try:
             if ID_INSTANCE and API_TOKEN:
                 resp = await client.post(url, json=payload)
-                logging.info(f"Green-API Response: {resp.status_code} - {resp.text}")
+                print(f"DEBUG: Green-API Result -> {resp.status_code}: {resp.text}")
                 resp.raise_for_status()
             else:
-                logging.warning(f"Tokens missing. Skip sending.")
+                print("DEBUG: ERROR - GREEN_API_INSTANCE_ID or TOKEN missing in environment.")
         except Exception as e:
-            logging.error(f"Failed to send Green-API message: {e}")
+            print(f"DEBUG SEND ERROR: {e}")
