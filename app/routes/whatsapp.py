@@ -86,13 +86,15 @@ async def process_green_api_interaction(chat_id: str, name: str, text: str):
             supabase.table("whatsapp_contacts").insert({
                 "phone": clean_phone,
                 "name": name,
-                "last_message": text
+                "last_message": text,
+                "is_returning": False
             }).execute()
         else:
-            print(f"DEBUG: Updating existing pilot {clean_phone}")
+            print(f"DEBUG: Updating existing pilot {clean_phone} - Marking as RETURNING")
             supabase.table("whatsapp_contacts").update({
                 "last_message": text,
-                "name": name 
+                "name": name,
+                "is_returning": True
             }).eq("phone", clean_phone).execute()
 
         # 2. Logic for Auto-Reply
