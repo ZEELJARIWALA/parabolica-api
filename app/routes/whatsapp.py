@@ -13,28 +13,30 @@ API_TOKEN = settings.GREEN_API_TOKEN
 BASE_URL = f"https://api.green-api.com/waInstance{ID_INSTANCE}"
 
 # ─── Pricing Data ─────────────────────────────────────────────────────────────
-PRICING_CATALOG = """
-* PARABOLICA MISSION PRICING*
+PRICING_CATALOG = """🚀 *PARABOLICA - LAUNCH OFFER (25% OFF)* 🚀
 
-*1. F1 RACING SIMULATION (Motion)*
-• Solo Session: ₹1,500
-• Pro League: ₹2,500
-• Sprint Mode: ₹1,000
+🏎️ *F1 MOTION RACING*
+• 6 Laps: ₹599
+• 15 Min (10 Laps): ₹699
+• 30 Min (15 Laps): ₹899
+• 45 Min (20 Laps): ₹1,099
 
-*2. VR ARENA (Immersive)*
-• 30 Min Mission: ₹1,200
-• 60 Min Mission: ₹2,000
+🚥 *F1 STATIC RACING*
+• 6 Laps: ₹399
+• 15 Min (10 Laps): ₹599
+• 30 Min (15 Laps): ₹799
+• 45 Min (20 Laps): ₹999
 
-*3. FPV DRONE TRAINING*
-• Basic Package: ₹1,000
-• Advanced Pilot: ₹2,500
+🥽 *VR GAMING*
+• 15 Min: ₹799
+• 30 Min: ₹999
+• 45 Min: ₹1,149
 
-* CURRENT OFFERS:*
-• Book 3+ pilots and get 15% OFF!
-• First Mission Discount: Use code 'PILOTID01' for ₹200 off!
+🔥 *SPECIAL OFFERS*
+• Group Discount Available!
+• Call us for custom booking: 7383756561
 
-Book your slot here: https://parabolica.co.in/booking
-"""
+🌐 Book Now: https://parabolica.co.in/booking"""
 
 @router.post("/webhook")
 async def webhook(request: Request):
@@ -90,7 +92,7 @@ async def process_green_api_interaction(chat_id: str, name: str, text: str):
         response_text = ""
         booking_link = "https://parabolica.co.in/booking"
         info_link = "https://parabolica.co.in"
-        contact_phone = "+91 63542 28913"
+        contact_phone = "+91 73837 56561"
         text_lower = text.lower().strip()
         
         trigger_msg = "hello parabolica! i'm interested in booking a session."
