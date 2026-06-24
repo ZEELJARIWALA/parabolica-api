@@ -11,7 +11,7 @@ Run with:
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
-from app.routes import bookings, inquiries, admin, slots
+from app.routes import bookings, inquiries, admin, slots, whatsapp
 
 # ─── App Init ─────────────────────────────────────────────────────────────────
 app = FastAPI(
@@ -36,6 +36,7 @@ app.include_router(bookings.router)
 app.include_router(inquiries.router)
 app.include_router(admin.router)
 app.include_router(slots.router)
+app.include_router(whatsapp.router)
 
 
 # ─── Health Check ─────────────────────────────────────────────────────────────

@@ -62,24 +62,17 @@ class MissionConfig(BaseModel):
 
 class CreateBookingRequest(BaseModel):
     branch: Literal["SURAT", "MUMBAI"] = Field(..., description="Which terminal to book")
-    booking_date: Optional[datetime.date] = None
-    pilot_name: str = Field(..., min_length=2, max_length=100)
-    pilot_phone: str = Field(..., min_length=7, max_length=15)
-    mission_configs: list[MissionConfig] = Field(..., min_length=1, description="At least one game required")
+    booking_date: Optional[str] = None # Relaxed to string to prevent parsing errors, converted later
+    pilot_name: str = Field(..., min_length=1, max_length=100)
+    pilot_phone: str = Field(..., min_length=7, max_length=20)
+    mission_configs: list[MissionConfig] = Field(..., min_length=1)
 
     @field_validator("pilot_phone")
     @classmethod
     def phone_must_be_numeric(cls, v: str) -> str:
-        cleaned = v.replace("+", "").replace("-", "").replace(" ", "")
-        if not cleaned.isdigit():
-            raise ValueError("Phone number must contain only digits.")
-        return v
-
-    @field_validator("mission_configs")
-    @classmethod
-    def fpv_only_in_surat(cls, configs: list, info) -> list:
-        """FPV Gaming is only available in the SURAT branch."""
-        return configs
+        # Just strip common decorators and accept
+        cleaned = v.replace("+", "").replace("-", "").replace(" ", "").replace("(", "").replace(")", "")
+        return cleaned
 
 
 # ─── Status Update Request ────────────────────────────────────────────────────
