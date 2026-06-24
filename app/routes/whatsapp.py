@@ -8,8 +8,8 @@ import os
 router = APIRouter(prefix="/whatsapp", tags=["WhatsApp Bot"])
 
 # ─── Configuration (Green-API) ────────────────────────────────────────────────
-ID_INSTANCE = os.getenv("GREEN_API_INSTANCE_ID")
-API_TOKEN = os.getenv("GREEN_API_TOKEN")
+ID_INSTANCE = settings.GREEN_API_INSTANCE_ID
+API_TOKEN = settings.GREEN_API_TOKEN
 BASE_URL = f"https://api.green-api.com/waInstance{ID_INSTANCE}"
 
 # ─── Pricing Data ─────────────────────────────────────────────────────────────
