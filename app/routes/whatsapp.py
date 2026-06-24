@@ -37,42 +37,39 @@ Book your slot here: {booking_link}
 """
 
 @router.post("/webhook")
-async def webhook(request: Request, background_tasks: BackgroundTasks):
+async def webhook(request: Request):
     try:
         data = await request.json()
-        print(f"DEBUG: Received Webhook - {data}") # Render will always show 'print'
+        print(f"DEBUG STEP 1: Received Webhook Data")
         
         type_webhook = data.get("typeWebhook")
-        
         if type_webhook == "incomingMessageReceived":
             sender_data = data.get("senderData", {})
             chat_id = sender_data.get("chatId")
             name = sender_data.get("senderName", "Pilot")
             
-            # Extract text carefully (Handles both standard and extended messages)
             message_data = data.get("messageData", {})
-            body = ""
-            
+            text = ""
             if "textMessageData" in message_data:
-                body = message_data["textMessageData"].get("textMessage", "")
+                text = message_data["textMessageData"].get("textMessage", "")
             elif "extendedTextMessageData" in message_data:
-                body = message_data["extendedTextMessageData"].get("text", "")
+                text = message_data["extendedTextMessageData"].get("text", "")
             
-            print(f"DEBUG: Extracting text... Found: '{body}'")
+            print(f"DEBUG STEP 2: Text extracted -> '{text}'")
             
-            if body and chat_id:
-                # Process in background
-                background_tasks.add_task(process_green_api_interaction, chat_id, name, body)
+            if text and chat_id:
+                # RUN IMMEDIATELY (No background task) to ensure it finishes
+                await process_green_api_interaction(chat_id, name, text)
             else:
-                print("DEBUG: Ignored - Missing body or chat_id")
+                print("DEBUG: Missing text or chat_id")
                 
     except Exception as e:
-        print(f"DEBUG ERROR in webhook: {e}")
+        print(f"!!! CRITICAL WEBHOOK ERROR: {e}")
         
     return {"status": "success"}
 
 async def process_green_api_interaction(chat_id: str, name: str, text: str):
-    print(f"DEBUG: Processing for {chat_id}...")
+    print(f"DEBUG STEP 3: Starting Database/Reply logic for {chat_id}")
     try:
         # 1. Update/Create user in database
         clean_phone = chat_id.split("@")[0]
