@@ -89,6 +89,7 @@ async def process_green_api_interaction(chat_id: str, name: str, text: str):
         # 2. Logic for Universal Response
         response_text = ""
         booking_link = "https://parabolica.co.in/booking"
+        info_link = "https://parabolica.co.in"
         contact_phone = "+91 63542 28913"
         text_lower = text.lower().strip()
         
@@ -108,7 +109,7 @@ async def process_green_api_interaction(chat_id: str, name: str, text: str):
             response_text = (
                 f"Hello {name}! 🛰️ We've received your message.\n\n"
                 f"To help you immediately, please visit the link below to view our *LIVE PRICING*, *OFFERS*, and *BOOK* your session:\n\n"
-                f"🔗 {booking_link}\n\n"
+                f"🔗 {info_link}\n\n"
                 f"If you'd rather speak to us directly, call: {contact_phone}"
             )
 
