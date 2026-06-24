@@ -49,13 +49,16 @@ async def webhook(request: Request, background_tasks: BackgroundTasks):
             chat_id = sender_data.get("chatId")
             name = sender_data.get("senderName", "Pilot")
             
-            # Extract text carefully
+            # Extract text carefully (Handles both standard and extended messages)
             message_data = data.get("messageData", {})
             body = ""
+            
             if "textMessageData" in message_data:
                 body = message_data["textMessageData"].get("textMessage", "")
+            elif "extendedTextMessageData" in message_data:
+                body = message_data["extendedTextMessageData"].get("text", "")
             
-            print(f"DEBUG: Msg from {name} ({chat_id}): {body}")
+            print(f"DEBUG: Extracting text... Found: '{body}'")
             
             if body and chat_id:
                 # Process in background
