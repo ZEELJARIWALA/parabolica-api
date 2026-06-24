@@ -33,7 +33,7 @@ PRICING_CATALOG = """
 • Book 3+ pilots and get 15% OFF!
 • First Mission Discount: Use code 'PILOTID01' for ₹200 off!
 
-Book your slot here: {booking_link}
+Book your slot here: https://parabolica.co.in/booking
 """
 
 @router.post("/webhook")
@@ -58,7 +58,7 @@ async def webhook(request: Request):
             print(f"DEBUG STEP 2: Text extracted -> '{text}'")
             
             if text and chat_id:
-                # RUN IMMEDIATELY (No background task) to ensure it finishes
+                # RUN IMMEDIATELY
                 await process_green_api_interaction(chat_id, name, text)
             else:
                 print("DEBUG: Missing text or chat_id")
@@ -74,59 +74,50 @@ async def process_green_api_interaction(chat_id: str, name: str, text: str):
         # 1. Update/Create user in database
         clean_phone = chat_id.split("@")[0]
         
-        print(f"DEBUG: Checking database for {clean_phone}...")
         user_query = supabase.table("whatsapp_contacts").select("*").eq("phone", clean_phone).execute()
         is_new_user = len(user_query.data) == 0
         
         if is_new_user:
-            print(f"DEBUG: Inserting NEW pilot {clean_phone}")
             supabase.table("whatsapp_contacts").insert({
-                "phone": clean_phone,
-                "name": name,
-                "last_message": text,
-                "is_returning": False
+                "phone": clean_phone, "name": name, "last_message": text, "is_returning": False
             }).execute()
         else:
-            print(f"DEBUG: Updating existing pilot {clean_phone} - Marking as RETURNING")
             supabase.table("whatsapp_contacts").update({
-                "last_message": text,
-                "name": name,
-                "is_returning": True
+                "last_message": text, "name": name, "is_returning": True
             }).eq("phone", clean_phone).execute()
 
-        # 2. Logic for Auto-Reply
+        # 2. Logic for Universal Response
         response_text = ""
-        booking_link = f"{settings.FRONTEND_URL}/booking"
+        booking_link = "https://parabolica.co.in/booking"
         contact_phone = "+91 63542 28913"
         text_lower = text.lower().strip()
         
-        # Exact trigger for the button
         trigger_msg = "hello parabolica! i'm interested in booking a session."
-        
-        print(f"DEBUG: Checking trigger for text: '{text_lower}'")
 
-        if trigger_msg in text_lower or any(k in text_lower for k in ["price", "pricing", "rate", "cost"]):
-            print(f"DEBUG: Trigger MATCHED. Preparing pricing catalog.")
+        if trigger_msg in text_lower or any(k in text_lower for k in ["price", "pricing", "rate", "cost", "offer"]):
+            # FULL PRICING INFO
             response_text = (
-                f"Hello {name}! 🛰️ We're thrilled to have you at Parabolica.\n\n"
+                f"Hello {name}! 🛰️ Thanks for reaching out.\n\n"
                 f"Here is our current mission catalog and exclusive offers:\n"
-                f"{PRICING_CATALOG.format(booking_link=booking_link)}\n\n"
+                f"{PRICING_CATALOG}\n\n"
                 f"📞 *Need to talk to us?* Call our Command Center at {contact_phone}\n\n"
                 f"See you in the Arena! 🏎️💨"
             )
-        elif is_new_user or any(k in text_lower for k in ["hello", "hi", "hey"]):
-            print(f"DEBUG: Trigger: Greeting. Sending menu.")
-            response_text = f"Welcome to Parabolica, {name}! 🛰️\n\nAre you looking for *PRICING* or do you want to *BOOK* a session?\n\nType 'Pricing' for our latest packages!"
+        else:
+            # UNIVERSAL FALLBACK
+            response_text = (
+                f"Hello {name}! 🛰️ We've received your message.\n\n"
+                f"To help you immediately, please visit the link below to view our *LIVE PRICING*, *OFFERS*, and *BOOK* your session:\n\n"
+                f"🔗 {booking_link}\n\n"
+                f"If you'd rather speak to us directly, call: {contact_phone}"
+            )
 
         # 3. Send via Green-API
         if response_text:
-            print(f"DEBUG: Sending message to Green-API for {chat_id}")
             await send_green_api_message(chat_id, response_text)
-        else:
-            print(f"DEBUG: No auto-reply response generated.")
             
     except Exception as e:
-        print(f"DEBUG DATABASE ERROR: {e}")
+        print(f"DEBUG DATABASE/LOGIC ERROR: {e}")
 
 async def send_green_api_message(chat_id: str, message: str):
     url = f"{BASE_URL}/sendMessage/{API_TOKEN}"
