@@ -139,7 +139,13 @@ def get_all_bookings(
     """
     Admin-only: Returns all bookings, optionally filtered by branch.
     Admins with terminal='ALL' can see all. Branch-specific admins see only their sector.
+    By default, only shows bookings from today onwards (no past entries).
+    If a specific 'date' is provided, it shows only that exact date.
     """
+    from datetime import date as dt_date
+
+    today_str = str(dt_date.today())  # e.g. "2026-06-25"
+
     # ✅ Security: Branch-specific admin cannot see other branches
     if admin.admin_terminal != "ALL":
         branch = admin.admin_terminal  # force to their terminal
@@ -151,9 +157,13 @@ def get_all_bookings(
         query = query.eq("branch", branch)
     
     if date:
+        # Specific date requested — exact match only
         query = query.eq("booking_date", date)
+    else:
+        # No date filter — show today + future only (hides all past bookings)
+        query = query.gte("booking_date", today_str)
 
-    bookings_result = query.order("created_at", desc=True).execute()
+    bookings_result = query.order("booking_date", desc=False).execute()
     bookings = bookings_result.data or []
 
     if not bookings:
