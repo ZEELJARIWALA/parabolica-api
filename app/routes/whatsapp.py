@@ -38,35 +38,86 @@ PRICING_CATALOG = """🚀 *PARABOLICA - LAUNCH OFFER (25% OFF)* 🚀
 
 🌐 Book Now: https://parabolica.co.in/booking"""
 
+def extract_text_from_webhook(message_data: dict) -> str:
+    if not message_data:
+        return ""
+    
+    type_message = message_data.get("typeMessage")
+    
+    # 1. Standard text message
+    if type_message == "textMessage" and "textMessageData" in message_data:
+        return message_data["textMessageData"].get("textMessage", "")
+        
+    # 2. Extended text message (links, quotes, etc.)
+    if type_message == "extendedTextMessage" and "extendedTextMessageData" in message_data:
+        return message_data["extendedTextMessageData"].get("text", "")
+        
+    # 3. Interactive Button Reply
+    if type_message == "interactiveButtonReply" and "interactiveButtonReply" in message_data:
+        return message_data["interactiveButtonReply"].get("buttonText", "")
+        
+    # 4. Template Button Reply
+    if type_message == "templateButtonsReply" and "templateButtonsReply" in message_data:
+        return message_data["templateButtonsReply"].get("selectedDisplayText", "")
+        
+    # 5. List message reply
+    if type_message == "listMessage" and "listMessageData" in message_data:
+        return message_data["listMessageData"].get("title", "")
+        
+    # 6. File / Media / Document caption
+    if "fileMessageData" in message_data:
+        return message_data["fileMessageData"].get("caption", "")
+        
+    # Fallback to search recursively for text fields
+    for key in ["textMessageData", "extendedTextMessageData", "interactiveButtonReply", "templateButtonsReply", "listMessageData", "fileMessageData"]:
+        if key in message_data and isinstance(message_data[key], dict):
+            for subkey in ["textMessage", "text", "buttonText", "selectedDisplayText", "title", "caption"]:
+                val = message_data[key].get(subkey)
+                if val:
+                    return str(val)
+                    
+    return ""
+
 @router.post("/webhook")
 async def webhook(request: Request):
     try:
         data = await request.json()
-        print(f"DEBUG STEP 1: Received Webhook Data")
+        print(f"DEBUG STEP 1: Received Webhook Data -> {data}")
         
         type_webhook = data.get("typeWebhook")
+        print(f"DEBUG Webhook Type: {type_webhook}")
+        
         if type_webhook == "incomingMessageReceived":
-            sender_data = data.get("senderData", {})
+            sender_data = data.get("senderData") or {}
             chat_id = sender_data.get("chatId")
-            name = sender_data.get("senderName", "Pilot")
             
-            message_data = data.get("messageData", {})
-            text = ""
-            if "textMessageData" in message_data:
-                text = message_data["textMessageData"].get("textMessage", "")
-            elif "extendedTextMessageData" in message_data:
-                text = message_data["extendedTextMessageData"].get("text", "")
+            # Robust extraction of name to bypass Any None/null DB issues
+            raw_sender_name = sender_data.get("senderName")
+            raw_chat_name = sender_data.get("chatName")
+            raw_contact_name = sender_data.get("senderContactName")
             
-            print(f"DEBUG STEP 2: Text extracted -> '{text}'")
+            name = raw_sender_name or raw_chat_name or raw_contact_name or "Pilot"
+            name = name.strip()
+            if not name:
+                name = "Pilot"
+            
+            message_data = data.get("messageData") or {}
+            text = extract_text_from_webhook(message_data)
+            
+            print(f"DEBUG STEP 2: Text extracted -> '{text}', chat_id -> '{chat_id}', name -> '{name}'")
             
             if text and chat_id:
                 # RUN IMMEDIATELY
                 await process_green_api_interaction(chat_id, name, text)
             else:
-                print("DEBUG: Missing text or chat_id")
+                print(f"DEBUG: Missing text or chat_id (text={text}, chat_id={chat_id})")
+        else:
+            print(f"DEBUG: Ignored Webhook Type: {type_webhook}")
                 
     except Exception as e:
         print(f"!!! CRITICAL WEBHOOK ERROR: {e}")
+        import traceback
+        traceback.print_exc()
         
     return {"status": "success"}
 
@@ -80,12 +131,19 @@ async def process_green_api_interaction(chat_id: str, name: str, text: str):
         is_new_user = len(user_query.data) == 0
         
         if is_new_user:
+            print(f"DEBUG: Inserting brand new user: {clean_phone} / {name}")
             supabase.table("whatsapp_contacts").insert({
-                "phone": clean_phone, "name": name, "last_message": text, "is_returning": False
+                "phone": clean_phone, 
+                "name": name, 
+                "last_message": text, 
+                "is_returning": False
             }).execute()
         else:
+            print(f"DEBUG: Updating existing user: {clean_phone} / {name}")
             supabase.table("whatsapp_contacts").update({
-                "last_message": text, "name": name, "is_returning": True
+                "last_message": text, 
+                "name": name, 
+                "is_returning": True
             }).eq("phone", clean_phone).execute()
 
         # 2. Logic for Universal Response
@@ -121,6 +179,8 @@ async def process_green_api_interaction(chat_id: str, name: str, text: str):
             
     except Exception as e:
         print(f"DEBUG DATABASE/LOGIC ERROR: {e}")
+        import traceback
+        traceback.print_exc()
 
 async def send_green_api_message(chat_id: str, message: str):
     url = f"{BASE_URL}/sendMessage/{API_TOKEN}"
