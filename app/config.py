@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     META_ACCESS_TOKEN: str = ""
     META_PHONE_NUMBER_ID: str = ""
     WHATSAPP_VERIFY_TOKEN: str = ""
+    
+    # Node.js Self-Hosted WhatsApp Gateway URL
+    WHATSAPP_GATEWAY_URL: str = "http://localhost:8095"
 
     class Config:
         env_file = ".env"

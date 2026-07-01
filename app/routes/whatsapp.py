@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Request
 import httpx
 from app.database import supabase
+from app.config import settings
 import os
 
 router = APIRouter(prefix="/whatsapp", tags=["WhatsApp Bot"])
 
 # ─── Gateway URL (Node.js Self-Hosted WhatsApp Gateway) ───────────────────────
-GATEWAY_URL = os.getenv("WHATSAPP_GATEWAY_URL", "http://localhost:8095")
+GATEWAY_URL = settings.WHATSAPP_GATEWAY_URL
 
 # ─── Pricing Data ─────────────────────────────────────────────────────────────
 PRICING_CATALOG = """🚀 *PARABOLICA - LAUNCH OFFER (25% OFF)* 🚀
