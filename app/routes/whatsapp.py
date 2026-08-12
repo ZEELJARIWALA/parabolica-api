@@ -9,31 +9,35 @@ router = APIRouter(prefix="/whatsapp", tags=["WhatsApp Bot"])
 # ─── Gateway URL (Node.js Self-Hosted WhatsApp Gateway) ───────────────────────
 GATEWAY_URL = settings.WHATSAPP_GATEWAY_URL
 
-# ─── Pricing Data ─────────────────────────────────────────────────────────────
-PRICING_CATALOG = """🚀 *PARABOLICA - LAUNCH OFFER (25% OFF)* 🚀
+# ─── Contact Numbers ──────────────────────────────────────────────────────────
+SURAT_PHONE = "+91 87589 02732"
+MUMBAI_PHONE = "+91 99872 07826"
 
-🏎️ *F1 MOTION RACING*
-• 6 Laps: ₹599
-• 15 Min (10 Laps): ₹699
-• 30 Min (15 Laps): ₹899
-• 45 Min (20 Laps): ₹1,099
-
-🚥 *F1 STATIC RACING*
-• 6 Laps: ₹399
-• 15 Min (10 Laps): ₹599
-• 30 Min (15 Laps): ₹799
-• 45 Min (20 Laps): ₹999
+# ─── Pricing Data (Surat Terminal — Opening Special 25% OFF) ──────────────────
+PRICING_CATALOG = """🚀 *PARABOLICA — OPENING SPECIAL (25% OFF)* 🚀
+⚡ *Surat Terminal Only — Limited Time Offer!*
 
 🥽 *VR GAMING*
-• 15 Min: ₹799
-• 30 Min: ₹999
-• 45 Min: ₹1,149
+• 15 Minutes: ₹299
+• 30 Minutes: ₹499
+• 45 Minutes: ₹699
 
-🔥 *SPECIAL OFFERS*
-• Group Discount Available!
-• Call us for custom booking: 7383756561
+🏎️ *F1 STATIC SIM RACING*
+• 06 Laps: ₹299
+• 10 Laps: ₹499
+• 15 Laps: ₹699
+• 20 Laps: ₹899
 
-🌐 Book Now: https://parabolica.co.in/booking"""
+🔥 *COMBO PACKAGES (BEST VALUE)*
+• *Combo 1 – Starter:* VR (15 Min) + F1 Static (6 Laps) → ₹549
+• *Combo 2 – Explorer:* VR (30 Min) + F1 Static (10 Laps) → ₹899
+• *Combo 3 – Pro:* VR (45 Min) + F1 Static (15 Laps) → ₹1,249
+
+📞 *Enquiries:*
+• *Surat Terminal:* {surat}
+• *Mumbai Terminal:* {mumbai}
+
+🌐 Book Now: https://parabolica.co.in/booking""".format(surat=SURAT_PHONE, mumbai=MUMBAI_PHONE)
 
 # ─── Webhook: Receives forwarded messages from Node.js Gateway ─────────────────
 @router.post("/webhook")
@@ -87,7 +91,6 @@ async def process_whatsapp_message(phone: str, name: str, text: str):
         # 2. Build response
         response_text = ""
         info_link = "https://parabolica.co.in"
-        contact_phone = "+91 73837 56561"
         text_lower = text.lower().strip()
 
         trigger_msg = "hello parabolica! i'm interested in booking a session."
@@ -95,21 +98,25 @@ async def process_whatsapp_message(phone: str, name: str, text: str):
         if trigger_msg in text_lower or any(k in text_lower for k in ["price", "pricing", "rate", "cost", "offer"]):
             response_text = (
                 f"Hello {name}! 🛰️ Thanks for reaching out.\n\n"
-                f"Here is our current mission catalog and exclusive offers:\n"
+                f"Here are our current offers:\n"
                 f"{PRICING_CATALOG}\n\n"
-                f"📞 *Need to talk to us?* Call our Command Center at {contact_phone}\n\n"
+                f"⚠️ *Note:* These prices are for *Surat Terminal only* — Limited Time Opening Offer!\n\n"
                 f"See you in the Arena! 🏎️💨"
             )
         elif "surat" in text_lower:
             response_text = (
-                f"🏎️ *Parabolica Surat Terminal Location Map:*\n"
+                f"🏎️ *Parabolica Surat Terminal*\n\n"
+                f"📍 *Location Map:*\n"
                 f"🔗 https://maps.app.goo.gl/pmxQ27pFZYqMBCATA\n\n"
+                f"📞 *For Enquiries:* {SURAT_PHONE}\n\n"
                 f"Looking forward to seeing you at the Grid! 🏁"
             )
         elif "mumbai" in text_lower:
             response_text = (
-                f"🏎️ *Parabolica Mumbai Terminal Location Map:*\n"
+                f"🏎️ *Parabolica Mumbai Terminal*\n\n"
+                f"📍 *Location Map:*\n"
                 f"🔗 https://maps.app.goo.gl/4uFgUNyXNAmSNz1g6\n\n"
+                f"📞 *For Enquiries:* {MUMBAI_PHONE}\n\n"
                 f"Looking forward to seeing you at the Grid! 🏁"
             )
         else:
@@ -117,11 +124,13 @@ async def process_whatsapp_message(phone: str, name: str, text: str):
                 f"Hello {name}! 🛰️ We've received your message.\n\n"
                 f"To help you immediately, please visit our portal to view *LIVE PRICING* and *BOOK* your session:\n"
                 f"🔗 {info_link}\n\n"
-                f"👉 Or reply **\"offer\"** to see our special pricing and packages!\n\n"
+                f"👉 Or reply *\"offer\"* to see our special pricing and packages!\n\n"
                 f"📍 *Our Locations:*\n"
                 f"• *Surat Terminal:* https://maps.app.goo.gl/pmxQ27pFZYqMBCATA\n"
                 f"• *Mumbai Terminal:* https://maps.app.goo.gl/4uFgUNyXNAmSNz1g6\n\n"
-                f"📞 *Direct Support:* Call our center at {contact_phone}"
+                f"📞 *Enquiries:*\n"
+                f"• *Surat:* {SURAT_PHONE}\n"
+                f"• *Mumbai:* {MUMBAI_PHONE}"
             )
 
         # 3. Send reply via Gateway
